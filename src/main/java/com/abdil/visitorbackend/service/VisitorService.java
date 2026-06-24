@@ -19,6 +19,8 @@ public class VisitorService {
     private static final long VISITOR_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
     public Map<String, Object> trackVisitor(String ip, String userAgent, String appType) {
+        System.out.println("📊 [Service] trackVisitor appelé avec appType: '" + appType + "'");
+
         // 1. Mettre à jour ou insérer le visiteur
         String upsertSql = """
             INSERT INTO online_visitors (ip_address, user_agent, last_activity)
@@ -27,21 +29,30 @@ public class VisitorService {
             DO UPDATE SET last_activity = CURRENT_TIMESTAMP,
                           user_agent = EXCLUDED.user_agent
             """;
-        jdbcTemplate.update(upsertSql, ip, userAgent);
+        int visitorRows = jdbcTemplate.update(upsertSql, ip, userAgent);
+        System.out.println("📊 [Service] Visiteur mis à jour: " + visitorRows + " ligne(s)");
 
         // 2. ✅ INCÉMENTER LE COMPTEUR DE TÉLÉCHARGEMENT
-        String incrementSql = """
-            INSERT INTO download_stats (app_type, download_date, count)
-            VALUES (?, CURRENT_DATE, 1)
-            ON CONFLICT (app_type, download_date)
-            DO UPDATE SET count = download_stats.count + 1
-            """;
-        jdbcTemplate.update(incrementSql, appType);
+        try {
+            String incrementSql = """
+                INSERT INTO download_stats (app_type, download_date, count)
+                VALUES (?, CURRENT_DATE, 1)
+                ON CONFLICT (app_type, download_date)
+                DO UPDATE SET count = download_stats.count + 1
+                """;
+            int downloadRows = jdbcTemplate.update(incrementSql, appType);
+            System.out.println("📊 [Service] Téléchargement incrémenté: " + downloadRows + " ligne(s) affectée(s) pour '" + appType + "'");
+        } catch (Exception e) {
+            System.err.println("❌ [Service] Erreur lors de l'incrémentation: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         // 3. Mettre à jour les statistiques de visite
         updateVisitStats();
 
-        return getOnlineCount();
+        Map<String, Object> result = getOnlineCount();
+        System.out.println("📊 [Service] Résultat retourné: " + result);
+        return result;
     }
 
     public Map<String, Object> getOnlineCount() {
@@ -50,11 +61,15 @@ public class VisitorService {
             DELETE FROM online_visitors
             WHERE last_activity < CURRENT_TIMESTAMP - INTERVAL '5 minutes'
             """;
-        jdbcTemplate.update(deleteSql);
+        int deleted = jdbcTemplate.update(deleteSql);
+        if (deleted > 0) {
+            System.out.println("🧹 [Service] " + deleted + " visiteur(s) inactif(s) supprimé(s)");
+        }
 
         // Compter les visiteurs actifs
         String countSql = "SELECT COUNT(*) FROM online_visitors";
         int onlineCount = jdbcTemplate.queryForObject(countSql, Integer.class);
+        System.out.println("👥 [Service] Visiteurs en ligne: " + onlineCount);
 
         // Récupérer les téléchargements du jour
         String downloadsSql = """
@@ -65,6 +80,7 @@ public class VisitorService {
             WHERE download_date = CURRENT_DATE
             """;
         Map<String, Object> downloads = jdbcTemplate.queryForMap(downloadsSql);
+        System.out.println("📊 [Service] Téléchargements du jour: client=" + downloads.get("client_downloads") + ", driver=" + downloads.get("driver_downloads"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("online", onlineCount);
@@ -88,6 +104,7 @@ public class VisitorService {
                 total_visits = visit_stats.total_visits + 1,
                 unique_visitors = (SELECT COUNT(*) FROM online_visitors)
             """;
-        jdbcTemplate.update(statsSql);
+        int statsRows = jdbcTemplate.update(statsSql);
+        System.out.println("📊 [Service] Statistiques de visite mises à jour: " + statsRows + " ligne(s)");
     }
 }

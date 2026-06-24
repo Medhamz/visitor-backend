@@ -23,6 +23,12 @@ public class VisitorController {
         String ip = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
         String appType = payload != null ? payload.getOrDefault("appType", "unknown") : "unknown";
+
+        // ✅ LOG POUR VOIR CE QUI EST REÇU
+        System.out.println("📥 [Controller] appType reçu: '" + appType + "'");
+        System.out.println("📥 [Controller] IP: " + ip);
+        System.out.println("📥 [Controller] User-Agent: " + userAgent);
+
         return ResponseEntity.ok(visitorService.trackVisitor(ip, userAgent, appType));
     }
 
