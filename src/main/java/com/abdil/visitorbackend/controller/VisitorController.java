@@ -18,10 +18,12 @@ public class VisitorController {
 
     @PostMapping("/track")
     public ResponseEntity<Map<String, Object>> trackVisitor(
-            HttpServletRequest request) {
+            HttpServletRequest request,
+            @RequestBody(required = false) Map<String, String> payload) {
         String ip = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
-        return ResponseEntity.ok(visitorService.trackVisitor(ip, userAgent));
+        String appType = payload != null ? payload.getOrDefault("appType", "unknown") : "unknown";
+        return ResponseEntity.ok(visitorService.trackVisitor(ip, userAgent, appType));
     }
 
     @GetMapping("/online")
