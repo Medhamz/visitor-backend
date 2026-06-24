@@ -1,0 +1,18 @@
+# application.yml
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://dpg-d8naeg3tqb8s73cv0vbg-a/abdiltaxi}
+    username: ${DATABASE_USERNAME:abdil_user}
+    password: ${DATABASE_PASSWORD:yKYugkBFwU2Z3sIa38somtDYVYn48Yte}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: ${PORT:8083}
+  servlet:
+    context-path: /api/stats

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: visitor-backend
+    env: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
+    envVars:
+      - key: DATABASE_URL
+        value: jdbc:postgresql://dpg-d8naeg3tqb8s73cv0vbg-a/abdiltaxi?user=abdil_user&password=yKYugkBFwU2Z3sIa38somtDYVYn48Yte
+      - key: DATABASE_USERNAME
+        value: abdil_user
+      - key: DATABASE_PASSWORD
+        value: yKYugkBFwU2Z3sIa38somtDYVYn48Yte
+      - key: PORT
+        value: 8083
