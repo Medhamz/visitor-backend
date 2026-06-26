@@ -32,7 +32,7 @@ public class VisitorService {
         int visitorRows = jdbcTemplate.update(upsertSql, ip, userAgent);
         System.out.println("📊 [Service] Visiteur mis à jour: " + visitorRows + " ligne(s)");
 
-        // 2. ✅ INCÉMENTER LE COMPTEUR DE TÉLÉCHARGEMENT
+        // 2. INCÉMENTER LE COMPTEUR DE TÉLÉCHARGEMENT (historique complet)
         try {
             String incrementSql = """
                 INSERT INTO download_stats (app_type, download_date, count)
@@ -71,16 +71,15 @@ public class VisitorService {
         int onlineCount = jdbcTemplate.queryForObject(countSql, Integer.class);
         System.out.println("👥 [Service] Visiteurs en ligne: " + onlineCount);
 
-        // Récupérer les téléchargements du jour
+        // ✅ CHANGEMENT IMPORTANT ICI : Récupérer TOUS les téléchargements (pas seulement aujourd'hui)
         String downloadsSql = """
             SELECT 
                 COALESCE(SUM(CASE WHEN app_type = 'client' THEN count ELSE 0 END), 0) as client_downloads,
                 COALESCE(SUM(CASE WHEN app_type = 'driver' THEN count ELSE 0 END), 0) as driver_downloads
             FROM download_stats
-            WHERE download_date = CURRENT_DATE
             """;
         Map<String, Object> downloads = jdbcTemplate.queryForMap(downloadsSql);
-        System.out.println("📊 [Service] Téléchargements du jour: client=" + downloads.get("client_downloads") + ", driver=" + downloads.get("driver_downloads"));
+        System.out.println("📊 [Service] Téléchargements totaux (historique complet): client=" + downloads.get("client_downloads") + ", driver=" + downloads.get("driver_downloads"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("online", onlineCount);
