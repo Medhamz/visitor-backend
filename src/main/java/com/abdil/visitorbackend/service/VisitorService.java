@@ -32,7 +32,7 @@ public class VisitorService {
         int visitorRows = jdbcTemplate.update(upsertSql, ip, userAgent);
         System.out.println("📊 [Service] Visiteur mis à jour: " + visitorRows + " ligne(s)");
 
-        // 2. INCÉMENTER LE COMPTEUR DE TÉLÉCHARGEMENT (historique complet)
+        // 2. INCÉMENTER LE COMPTEUR DE TÉLÉCHARGEMENT
         try {
             String incrementSql = """
                 INSERT INTO download_stats (app_type, download_date, count)
@@ -71,23 +71,32 @@ public class VisitorService {
         int onlineCount = jdbcTemplate.queryForObject(countSql, Integer.class);
         System.out.println("👥 [Service] Visiteurs en ligne: " + onlineCount);
 
-        // ✅ CHANGEMENT IMPORTANT ICI : Récupérer TOUS les téléchargements (pas seulement aujourd'hui)
+        // ✅ CHANGEMENT CRITIQUE : Récupérer TOUS les téléchargements (SANS filtre de date)
         String downloadsSql = """
             SELECT 
                 COALESCE(SUM(CASE WHEN app_type = 'client' THEN count ELSE 0 END), 0) as client_downloads,
-                COALESCE(SUM(CASE WHEN app_type = 'driver' THEN count ELSE 0 END), 0) as driver_downloads
+                COALESCE(SUM(CASE WHEN app_type = 'driver' THEN count ELSE 0 END), 0) as driver_downloads,
+                COALESCE(SUM(CASE WHEN app_type = 'page_view' THEN count ELSE 0 END), 0) as page_views,
+                COALESCE(SUM(count), 0) as total_all
             FROM download_stats
             """;
         Map<String, Object> downloads = jdbcTemplate.queryForMap(downloadsSql);
-        System.out.println("📊 [Service] Téléchargements totaux (historique complet): client=" + downloads.get("client_downloads") + ", driver=" + downloads.get("driver_downloads"));
+
+        System.out.println("📊 [Service] Téléchargements TOTAUX (tous les jours):");
+        System.out.println("   - client: " + downloads.get("client_downloads"));
+        System.out.println("   - driver: " + downloads.get("driver_downloads"));
+        System.out.println("   - page_view: " + downloads.get("page_views"));
+        System.out.println("   - total: " + downloads.get("total_all"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("online", onlineCount);
         response.put("clientDownloads", downloads.get("client_downloads") != null ? downloads.get("client_downloads") : 0);
         response.put("driverDownloads", downloads.get("driver_downloads") != null ? downloads.get("driver_downloads") : 0);
+        response.put("pageViews", downloads.get("page_views") != null ? downloads.get("page_views") : 0);
         response.put("totalDownloads",
                 ((Number) response.get("clientDownloads")).intValue() +
-                        ((Number) response.get("driverDownloads")).intValue()
+                        ((Number) response.get("driverDownloads")).intValue() +
+                        ((Number) response.get("pageViews")).intValue()
         );
         response.put("timestamp", Instant.now().toString());
 
